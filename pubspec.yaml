@@ -36,8 +36,8 @@ dependencies:
   cupertino_icons: ^1.0.8
 
   flame: ^1.18.0
-  flame_forge2d: ^0.18.0
-  forge2d: ^0.13.0
+  flame_forge2d: 0.19.3+7
+  forge2d: 0.14.2+1
   provider: ^6.1.2
 
 dev_dependencies:

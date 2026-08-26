@@ -1,5 +1,4 @@
 import 'package:flame_forge2d/flame_forge2d.dart';
-import 'package:forge2d/forge2d.dart';
 
 /// A single static edge of the play area (ground, ceiling, left/right walls).
 ///

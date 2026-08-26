@@ -11,14 +11,13 @@ import '../config/level_config.dart';
 class LevelsData {
   LevelsData._();
 
-  static const moon = LevelConfig(
+  static final moon = LevelConfig(
     id: 'moon',
     name: 'Moon',
     gravity: Vector2(0, 1.6),
-    wind: Vector2.zero(),
   );
 
-  static const mars = LevelConfig(
+  static final mars = LevelConfig(
     id: 'mars',
     name: 'Mars',
     gravity: Vector2(0, 3.7),
@@ -26,12 +25,11 @@ class LevelsData {
     wind: Vector2(1.2, 0),
   );
 
-  static const jupiter = LevelConfig(
+  static final jupiter = LevelConfig(
     id: 'jupiter',
     name: 'Jupiter',
     gravity: Vector2(0, 24.8),
-    wind: Vector2.zero(),
   );
 
-  static const all = <LevelConfig>[moon, mars, jupiter];
+  static final all = <LevelConfig>[moon, mars, jupiter];
 }

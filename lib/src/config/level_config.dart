@@ -5,14 +5,14 @@ import 'package:forge2d/forge2d.dart';
 /// Adding a new planet only requires a new [LevelConfig] instance in
 /// `levels_data.dart` — no changes to the game/physics engine are needed.
 class LevelConfig {
-  const LevelConfig({
+  LevelConfig({
     required this.id,
     required this.name,
     required this.gravity,
-    this.wind = const Vector2.zero(),
+    Vector2? wind,
     this.arenaWidth = 40,
     this.arenaHeight = 22.5,
-  });
+  }) : wind = wind ?? Vector2.zero();
 
   final String id;
   final String name;
@@ -29,4 +29,8 @@ class LevelConfig {
   /// Play area size in Forge2D meters, used to place boundary walls.
   final double arenaWidth;
   final double arenaHeight;
+
+  /// Used only to construct [Forge2DGame] before the first real level is
+  /// loaded via `loadLevel`; overwritten immediately after.
+  static final Vector2 defaultGravityFallback = Vector2(0, 9.8);
 }
