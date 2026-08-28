@@ -6,6 +6,27 @@ import 'package:flame_forge2d/flame_forge2d.dart';
 
 import 'space_projectile.dart';
 
+/// A single darker "crater" blob drawn over a meteor's base fill, faking a
+/// rocky surface without needing a texture asset.
+class _Crater {
+  const _Crater(this.offset, this.radius);
+  final Offset offset;
+  final double radius;
+}
+
+List<_Crater> _generateCraters(double radius, int count, int seed) {
+  final random = Random(seed);
+  return List.generate(count, (_) {
+    final angle = random.nextDouble() * pi * 2;
+    final distance = random.nextDouble() * radius * 0.5;
+    final craterRadius = radius * (0.15 + random.nextDouble() * 0.22);
+    return _Crater(
+      Offset(cos(angle), sin(angle)) * distance,
+      craterRadius,
+    );
+  });
+}
+
 /// Fires the Meteor's shrapnel. Kept private since fragments are an
 /// implementation detail of the split, not a projectile a player selects
 /// or launches directly — they can't split further.
@@ -13,7 +34,14 @@ class _MeteorFragment extends SpaceProjectile {
   _MeteorFragment({
     required super.startPosition,
     required super.initialVelocity,
-  });
+  }) {
+    _bodyPaint = Paint()..color = const Color(0xFFA8A29E);
+    _craters = _generateCraters(radius, 2, hashCode);
+  }
+
+  late final Paint _bodyPaint;
+  late final List<_Crater> _craters;
+  final Paint _craterPaint = Paint()..color = const Color(0x552B2521);
 
   @override
   Color get color => const Color(0xFFA8A29E);
@@ -29,6 +57,14 @@ class _MeteorFragment extends SpaceProjectile {
 
   @override
   double get restitution => 0.2;
+
+  @override
+  void render(Canvas canvas) {
+    canvas.drawCircle(Offset.zero, radius, _bodyPaint);
+    for (final crater in _craters) {
+      canvas.drawCircle(crater.offset, crater.radius, _craterPaint);
+    }
+  }
 }
 
 /// Splits into three smaller fragments when tapped mid-flight, trading one
@@ -38,7 +74,20 @@ class MeteorProjectile extends SpaceProjectile {
   MeteorProjectile({
     required super.startPosition,
     required super.initialVelocity,
-  });
+  }) {
+    _bodyPaint = Paint()..color = const Color(0xFF78716C);
+    _craters = _generateCraters(radius, 5, hashCode);
+    _rimGlowPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = radius * 0.22
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.06)
+      ..color = const Color(0xFFF97316);
+  }
+
+  late final Paint _bodyPaint;
+  late final List<_Crater> _craters;
+  final Paint _craterPaint = Paint()..color = const Color(0x552B2521);
+  late final Paint _rimGlowPaint;
 
   /// Angle, in radians, each of the two outer fragments is deflected from
   /// the parent's velocity direction.
@@ -100,5 +149,17 @@ class MeteorProjectile extends SpaceProjectile {
     final cosA = cos(radians);
     final sinA = sin(radians);
     return Vector2(v.x * cosA - v.y * sinA, v.x * sinA + v.y * cosA);
+  }
+
+  /// A rocky body (base fill + overlapping darker "craters") with a glowing
+  /// fiery rim, like atmospheric-entry heat — replaces the base class's
+  /// plain lit-sphere look entirely.
+  @override
+  void render(Canvas canvas) {
+    canvas.drawCircle(Offset.zero, radius, _bodyPaint);
+    for (final crater in _craters) {
+      canvas.drawCircle(crater.offset, crater.radius, _craterPaint);
+    }
+    canvas.drawCircle(Offset.zero, radius, _rimGlowPaint);
   }
 }

@@ -1,12 +1,13 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flame/components.dart' show Anchor;
 import 'package:flame_forge2d/flame_forge2d.dart';
 
 import 'components/boundary_wall.dart';
+import 'components/deep_space_background.dart';
 import 'components/projectiles/booster_projectile.dart';
 import 'components/projectiles/space_projectile.dart';
-import 'components/starfield_background.dart';
 import 'components/structures/building_block.dart';
 import 'components/wind_affected.dart';
 import 'config/level_config.dart';
@@ -36,12 +37,40 @@ class GalacticDemolitionGame extends Forge2DGame {
   static const double _pixelsPerMeter = 20;
   static const int _startingAmmo = 8;
 
+  double _shakeIntensity = 0;
+  final Random _shakeRandom = Random();
+  static const double _shakeDecayPerSecond = 6;
+
   @override
   Future<void> onLoad() async {
     super.onLoad();
     camera.viewfinder.zoom = _pixelsPerMeter;
     camera.viewfinder.anchor = Anchor.center;
-    await camera.viewport.add(StarfieldBackground());
+    await camera.viewport.add(DeepSpaceBackground());
+  }
+
+  /// Kicks off a decaying camera-shake jitter, in world meters. Called by
+  /// high-impact hits and explosions; overlapping calls take the stronger
+  /// of the two rather than stacking, so a big explosion during a fading
+  /// small shake doesn't feel muted.
+  void triggerShake(double intensity) {
+    _shakeIntensity = max(_shakeIntensity, intensity);
+  }
+
+  void _updateScreenShake(double dt) {
+    if (_shakeIntensity <= 0) {
+      return;
+    }
+    _shakeIntensity -= _shakeDecayPerSecond * dt;
+    if (_shakeIntensity <= 0) {
+      _shakeIntensity = 0;
+      camera.viewfinder.position = Vector2.zero();
+      return;
+    }
+    camera.viewfinder.position = Vector2(
+      (_shakeRandom.nextDouble() * 2 - 1) * _shakeIntensity,
+      (_shakeRandom.nextDouble() * 2 - 1) * _shakeIntensity,
+    );
   }
 
   /// A deep space navy instead of pure black — pure black reads as "nothing
@@ -99,6 +128,7 @@ class GalacticDemolitionGame extends Forge2DGame {
       ..reset()
       ..startAmmo(_startingAmmo);
 
+    _shakeIntensity = 0;
     camera.viewfinder.position = Vector2.zero();
   }
 
@@ -107,6 +137,7 @@ class GalacticDemolitionGame extends Forge2DGame {
     super.update(dt);
     _applyWind(dt);
     _checkOutOfAmmo();
+    _updateScreenShake(dt);
   }
 
   /// The player has lost once every shot has been fired, none are still in

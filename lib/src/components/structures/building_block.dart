@@ -4,6 +4,7 @@ import 'package:flame_forge2d/flame_forge2d.dart';
 
 import '../../galactic_demolition_game.dart';
 import '../../systems/collision_system.dart';
+import '../../systems/particle_effects.dart';
 
 /// Base class for every destructible piece of an AI base.
 ///
@@ -17,7 +18,23 @@ abstract class BuildingBlock extends BodyComponent<GalacticDemolitionGame>
     required Vector2 center,
     required this.halfWidth,
     required this.halfHeight,
-  }) : _center = center;
+  }) : _center = center {
+    final cornerRadius = (halfWidth < halfHeight ? halfWidth : halfHeight) * 0.25;
+    _rrect = RRect.fromRectAndRadius(
+      Rect.fromCenter(
+        center: Offset.zero,
+        width: halfWidth * 2,
+        height: halfHeight * 2,
+      ),
+      Radius.circular(cornerRadius),
+    );
+    _shadowRRect = _rrect.shift(const Offset(0.05, 0.09));
+    _borderPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = cornerRadius * 0.3
+      ..color = const Color(0xB3000000);
+    _refreshFillShader();
+  }
 
   final Vector2 _center;
   final double halfWidth;
@@ -46,6 +63,20 @@ abstract class BuildingBlock extends BodyComponent<GalacticDemolitionGame>
   /// rounded — tougher blocks are worth proportionally more to destroy —
   /// but subclasses can override for a flat/curated value instead.
   int get scoreValue => maxHealth.round();
+
+  // Cached render state — everything here is built once (in the
+  // constructor) or refreshed only when [health] actually changes, never
+  // reallocated inside [render] itself.
+  late final RRect _rrect;
+  late final RRect _shadowRRect;
+  late final Paint _borderPaint;
+  final Paint _fillPaint = Paint();
+  final Paint _shadowPaint = Paint()
+    ..color = const Color(0x55000000)
+    // Sigma is in local (meter) units, which the camera then scales up by
+    // its zoom factor — a tiny sigma here still reads as a soft multi-pixel
+    // blur on screen.
+    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.12);
 
   @override
   Body createBody() {
@@ -84,10 +115,41 @@ abstract class BuildingBlock extends BodyComponent<GalacticDemolitionGame>
     if (isDestroyed) {
       onDestroyed();
       game.gameState.addScore(scoreValue);
+      game.world.add(
+        ParticleEffects.debris(origin: body.position.clone(), color: color),
+      );
+      // Bigger blocks feel like they should shake the screen more when
+      // they come down; capped so Titanium doesn't overwhelm the camera.
+      game.triggerShake((maxHealth * 0.01).clamp(0.05, 0.35));
       removeFromParent();
     } else {
+      _refreshFillShader();
       onDamaged(amount);
+      // A light, damage-proportional shake gives hits weight without a
+      // full particle burst on every scrape.
+      game.triggerShake((amount * 0.01).clamp(0.0, 0.12));
     }
+  }
+
+  /// Recomputes the fill gradient's colors from the current damage state.
+  /// Called only when [health] changes, not every frame — the gradient
+  /// [Shader] itself is cheap to rebuild but there's no reason to do it 60
+  /// times a second when nothing changed.
+  void _refreshFillShader() {
+    final damageFraction = 1 - (health / maxHealth).clamp(0.0, 1.0);
+    final baseColor = Color.lerp(
+      color,
+      const Color(0xFF1F2937),
+      damageFraction * 0.6,
+    )!;
+    final topColor = Color.lerp(baseColor, const Color(0xFFFFFFFF), 0.25)!;
+    final bottomColor = Color.lerp(baseColor, const Color(0xFF000000), 0.25)!;
+
+    _fillPaint.shader = Gradient.linear(
+      Offset(0, -halfHeight),
+      Offset(0, halfHeight),
+      [topColor, bottomColor],
+    );
   }
 
   /// Called when the block absorbs damage but survives. Override for
@@ -100,36 +162,19 @@ abstract class BuildingBlock extends BodyComponent<GalacticDemolitionGame>
   void onDestroyed() {}
 
   /// Replaces [BodyComponent]'s default flat-fill fixture rendering with a
-  /// rounded, top-lit block: a vertical gradient for a bit of volume, a
-  /// dark border for separation against other blocks, and a darkening tint
-  /// as [health] drops so damage is visible before the block breaks.
+  /// rounded, top-lit block: a drop shadow for separation from the space
+  /// background, a vertical gradient for volume, subclass-specific accents
+  /// (bevel/glass/glow — see [renderAccents]), and a dark border.
   @override
   void render(Canvas canvas) {
-    final rect = Rect.fromCenter(
-      center: Offset.zero,
-      width: halfWidth * 2,
-      height: halfHeight * 2,
-    );
-    final cornerRadius = (halfWidth < halfHeight ? halfWidth : halfHeight) * 0.25;
-    final rrect = RRect.fromRectAndRadius(rect, Radius.circular(cornerRadius));
-
-    final damageFraction = 1 - (health / maxHealth).clamp(0.0, 1.0);
-    final baseColor = Color.lerp(color, const Color(0xFF1F2937), damageFraction * 0.6)!;
-    final topColor = Color.lerp(baseColor, const Color(0xFFFFFFFF), 0.25)!;
-    final bottomColor = Color.lerp(baseColor, const Color(0xFF000000), 0.25)!;
-
-    final fillPaint = Paint()
-      ..shader = Gradient.linear(
-        Offset(0, -halfHeight),
-        Offset(0, halfHeight),
-        [topColor, bottomColor],
-      );
-    canvas.drawRRect(rrect, fillPaint);
-
-    final borderPaint = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = cornerRadius * 0.3
-      ..color = const Color(0xB3000000);
-    canvas.drawRRect(rrect, borderPaint);
+    canvas.drawRRect(_shadowRRect, _shadowPaint);
+    canvas.drawRRect(_rrect, _fillPaint);
+    renderAccents(canvas, _rrect);
+    canvas.drawRRect(_rrect, _borderPaint);
   }
+
+  /// Hook for subclass-specific visual texture drawn between the base fill
+  /// and the border — e.g. Titanium's bevel, Solar Panel's glass
+  /// reflections, Repulsion Shield's pulsing neon rim. No-op by default.
+  void renderAccents(Canvas canvas, RRect rrect) {}
 }

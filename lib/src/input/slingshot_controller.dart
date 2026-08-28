@@ -24,7 +24,14 @@ class SlingshotController extends PositionComponent
     this.maxPullDistance = 4,
     this.launchPower = 9,
     required this.projectileFactory,
-  });
+  }) {
+    final baseRect = Rect.fromCenter(
+      center: (origin + Vector2(0, 0.15)).toOffset(),
+      width: 1.6,
+      height: 0.3,
+    );
+    _baseRRect = RRect.fromRectAndRadius(baseRect, const Radius.circular(0.1));
+  }
 
   /// The slingshot's fixed anchor point, in world meters.
   final Vector2 origin;
@@ -50,12 +57,25 @@ class SlingshotController extends PositionComponent
   static final Vector2 _prongOffset = Vector2(0.45, -1.2);
   static final Vector2 _restOffset = Vector2(0, -0.35);
 
-  static const Color _metalColor = Color(0xFF9CA3AF);
+  static const Color _metalColor = Color(0xFFB6BEC9);
   static const Color _bandColor = Color(0xFF4B5563);
-  static const Color _trajectoryColor = Color(0xFFE5E7EB);
+  static const Color _trajectoryColor = Color(0xFF67E8F9);
+  static const Color _chargeColor = Color(0xFFFB923C);
+
+  late final RRect _baseRRect;
+  late final Paint _basePaint = Paint()
+    ..shader = Gradient.linear(
+      _baseRRect.outerRect.topCenter,
+      _baseRRect.outerRect.bottomCenter,
+      const [Color(0xFF6B7280), Color(0xFF1F2937)],
+    );
 
   late final Paint _prongPaint = Paint()
-    ..color = _metalColor
+    ..shader = Gradient.linear(
+      _leftProngTip.toOffset(),
+      origin.toOffset(),
+      const [Color(0xFFE5E7EB), _metalColor],
+    )
     ..strokeWidth = 0.12
     ..strokeCap = StrokeCap.round;
 
@@ -65,6 +85,16 @@ class SlingshotController extends PositionComponent
     ..strokeCap = StrokeCap.round;
 
   late final Paint _pouchPaint = Paint()..color = _bandColor;
+
+  // Pulsing "charge" ring around the pouch — brighter/wider the further the
+  // player pulls back. Mutated per-frame, never reallocated.
+  late final Paint _chargeGlowPaint = Paint()
+    ..style = PaintingStyle.stroke
+    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.06);
+
+  late final Paint _trajectoryGlowPaint = Paint()
+    ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 0.09);
+  final Paint _trajectoryCorePaint = Paint();
 
   Vector2 get _leftProngTip =>
       origin + Vector2(-_prongOffset.x, _prongOffset.y);
@@ -129,6 +159,8 @@ class SlingshotController extends PositionComponent
   void render(Canvas canvas) {
     super.render(canvas);
 
+    canvas.drawRRect(_baseRRect, _basePaint);
+
     final leftTip = _leftProngTip.toOffset();
     final rightTip = _rightProngTip.toOffset();
     final base = origin.toOffset();
@@ -143,9 +175,19 @@ class SlingshotController extends PositionComponent
     // shape — rather than a single line straight to the pull point.
     canvas.drawLine(leftTip, pouch, _bandPaint);
     canvas.drawLine(rightTip, pouch, _bandPaint);
-    canvas.drawCircle(pouch, 0.14, _pouchPaint);
 
     final pull = _pull;
+    final chargeFraction = pull == null
+        ? 0.0
+        : (pull.length / maxPullDistance).clamp(0.0, 1.0);
+    if (chargeFraction > 0) {
+      _chargeGlowPaint
+        ..strokeWidth = 0.03 + chargeFraction * 0.08
+        ..color = _chargeColor.withValues(alpha: 0.4 + chargeFraction * 0.6);
+      canvas.drawCircle(pouch, 0.14 + chargeFraction * 0.08, _chargeGlowPaint);
+    }
+    canvas.drawCircle(pouch, 0.14, _pouchPaint);
+
     if (pull == null) {
       return;
     }
@@ -157,6 +199,12 @@ class SlingshotController extends PositionComponent
       gravity: level.gravity,
       wind: level.wind,
     );
-    TrajectoryPredictor.renderDots(canvas, path, _trajectoryColor);
+    TrajectoryPredictor.renderGlowingDots(
+      canvas,
+      path,
+      _trajectoryColor,
+      _trajectoryGlowPaint,
+      _trajectoryCorePaint,
+    );
   }
 }
