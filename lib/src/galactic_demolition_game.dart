@@ -1,9 +1,12 @@
+import 'dart:ui';
+
 import 'package:flame/components.dart' show Anchor;
 import 'package:flame_forge2d/flame_forge2d.dart';
 
 import 'components/boundary_wall.dart';
 import 'components/projectiles/booster_projectile.dart';
 import 'components/projectiles/space_projectile.dart';
+import 'components/starfield_background.dart';
 import 'components/structures/building_block.dart';
 import 'components/wind_affected.dart';
 import 'config/level_config.dart';
@@ -38,7 +41,13 @@ class GalacticDemolitionGame extends Forge2DGame {
     super.onLoad();
     camera.viewfinder.zoom = _pixelsPerMeter;
     camera.viewfinder.anchor = Anchor.center;
+    await camera.viewport.add(StarfieldBackground());
   }
+
+  /// A deep space navy instead of pure black — pure black reads as "nothing
+  /// rendered" rather than as a deliberate background.
+  @override
+  Color backgroundColor() => const Color(0xFF0B1120);
 
   /// Tears down the previous level's walls/bodies and configures the world
   /// for [level]: sets gravity, rebuilds boundary walls sized to the arena,
@@ -88,7 +97,7 @@ class GalacticDemolitionGame extends Forge2DGame {
 
     gameState
       ..reset()
-      ..setAmmoRemaining(_startingAmmo);
+      ..startAmmo(_startingAmmo);
 
     camera.viewfinder.position = Vector2.zero();
   }

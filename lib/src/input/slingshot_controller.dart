@@ -46,14 +46,30 @@ class SlingshotController extends PositionComponent
 
   Vector2? _pull;
 
-  final Paint _bandPaint = Paint()
-    ..color = const Color(0xFFCCCCCC)
-    ..strokeWidth = 0.08
+  // The fork is drawn relative to `origin`, prongs pointing "up" (world -y).
+  static final Vector2 _prongOffset = Vector2(0.45, -1.2);
+  static final Vector2 _restOffset = Vector2(0, -0.35);
+
+  static const Color _metalColor = Color(0xFF9CA3AF);
+  static const Color _bandColor = Color(0xFF4B5563);
+  static const Color _trajectoryColor = Color(0xFFE5E7EB);
+
+  late final Paint _prongPaint = Paint()
+    ..color = _metalColor
+    ..strokeWidth = 0.12
     ..strokeCap = StrokeCap.round;
 
-  final Paint _trajectoryPaint = Paint()
-    ..color = const Color(0x99FFFFFF)
-    ..strokeWidth = 0.05;
+  late final Paint _bandPaint = Paint()
+    ..color = _bandColor
+    ..strokeWidth = 0.06
+    ..strokeCap = StrokeCap.round;
+
+  late final Paint _pouchPaint = Paint()..color = _bandColor;
+
+  Vector2 get _leftProngTip =>
+      origin + Vector2(-_prongOffset.x, _prongOffset.y);
+  Vector2 get _rightProngTip => origin + _prongOffset;
+  Vector2 get _pouchPosition => origin + (_pull ?? _restOffset);
 
   /// Covering the whole world with a hit-test that always succeeds means a
   /// drag can start anywhere on screen — precisely hitting a small anchor
@@ -112,13 +128,27 @@ class SlingshotController extends PositionComponent
   @override
   void render(Canvas canvas) {
     super.render(canvas);
+
+    final leftTip = _leftProngTip.toOffset();
+    final rightTip = _rightProngTip.toOffset();
+    final base = origin.toOffset();
+    final pouch = _pouchPosition.toOffset();
+
+    // Fork posts, drawn every frame so the player always has a visible
+    // anchor to aim from, not just while actively dragging.
+    canvas.drawLine(base, leftTip, _prongPaint);
+    canvas.drawLine(base, rightTip, _prongPaint);
+
+    // Bands run from each prong tip to the pouch — a real slingshot's Y
+    // shape — rather than a single line straight to the pull point.
+    canvas.drawLine(leftTip, pouch, _bandPaint);
+    canvas.drawLine(rightTip, pouch, _bandPaint);
+    canvas.drawCircle(pouch, 0.14, _pouchPaint);
+
     final pull = _pull;
     if (pull == null) {
       return;
     }
-
-    final pullPoint = origin + pull;
-    canvas.drawLine(origin.toOffset(), pullPoint.toOffset(), _bandPaint);
 
     final level = game.currentLevel;
     final path = TrajectoryPredictor.samplePath(
@@ -127,6 +157,6 @@ class SlingshotController extends PositionComponent
       gravity: level.gravity,
       wind: level.wind,
     );
-    TrajectoryPredictor.renderDashed(canvas, path, _trajectoryPaint);
+    TrajectoryPredictor.renderDots(canvas, path, _trajectoryColor);
   }
 }

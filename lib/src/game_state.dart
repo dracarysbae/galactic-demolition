@@ -7,6 +7,10 @@ import 'package:flutter/foundation.dart';
 class GameState extends ChangeNotifier {
   int score = 0;
   int ammoRemaining = 0;
+
+  /// Ammo the level started with, so the HUD can render a "N of M" style
+  /// indicator instead of just a bare count.
+  int maxAmmo = 0;
   bool isLevelComplete = false;
   bool isGameOver = false;
 
@@ -15,8 +19,11 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void setAmmoRemaining(int ammo) {
-    ammoRemaining = ammo;
+  /// Sets the ammo the current level starts with — call once when a level
+  /// loads, not mid-level (use [consumeAmmo] for that).
+  void startAmmo(int count) {
+    ammoRemaining = count;
+    maxAmmo = count;
     notifyListeners();
   }
 
@@ -45,6 +52,7 @@ class GameState extends ChangeNotifier {
   void reset() {
     score = 0;
     ammoRemaining = 0;
+    maxAmmo = 0;
     isLevelComplete = false;
     isGameOver = false;
     notifyListeners();

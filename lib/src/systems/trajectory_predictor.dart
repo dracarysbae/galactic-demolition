@@ -78,4 +78,24 @@ class TrajectoryPredictor {
       }
     }
   }
+
+  /// Renders [points] as a trail of dots that fade out toward the end.
+  ///
+  /// Reads as a targeting reticle trail rather than a solid rail, and the
+  /// fade reinforces that later points are a rougher guess (the preview
+  /// ignores drag/collisions, so it drifts further from reality over time).
+  static void renderDots(
+    Canvas canvas,
+    List<Vector2> points,
+    Color color, {
+    double dotRadius = 0.08,
+    int stride = 2,
+  }) {
+    for (var i = 0; i < points.length; i += stride) {
+      final fade = 1 - (i / points.length);
+      final paint = Paint()
+        ..color = color.withValues(alpha: fade.clamp(0.15, 1.0));
+      canvas.drawCircle(points[i].toOffset(), dotRadius, paint);
+    }
+  }
 }

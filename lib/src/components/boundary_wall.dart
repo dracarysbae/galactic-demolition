@@ -13,32 +13,55 @@ class BoundaryWall extends BodyComponent {
     required this.end,
     this.thickness = 0.5,
   }) {
-    paint.color = const Color(0xFF4B5563);
+    final length = (end - start).length;
+    final isHorizontal = (end.y - start.y).abs() < (end.x - start.x).abs();
+    _halfWidth = isHorizontal ? length / 2 : thickness / 2;
+    _halfHeight = isHorizontal ? thickness / 2 : length / 2;
   }
 
   final Vector2 start;
   final Vector2 end;
   final double thickness;
 
+  late final double _halfWidth;
+  late final double _halfHeight;
+
   @override
   Body createBody() {
     final center = (start + end) / 2;
-    final bodyDef = BodyDef(
-      type: BodyType.static,
-      position: center,
-    );
+    final bodyDef = BodyDef(type: BodyType.static, position: center);
     final body = world.createBody(bodyDef);
 
-    final length = (end - start).length;
-    final isHorizontal = (end.y - start.y).abs() < (end.x - start.x).abs();
-    final halfWidth = isHorizontal ? length / 2 : thickness / 2;
-    final halfHeight = isHorizontal ? thickness / 2 : length / 2;
-
-    final shape = PolygonShape()..setAsBoxXY(halfWidth, halfHeight);
+    final shape = PolygonShape()..setAsBoxXY(_halfWidth, _halfHeight);
     final fixtureDef = FixtureDef(shape)
       ..friction = 0.3
       ..restitution = 0.1;
     body.createFixture(fixtureDef);
     return body;
+  }
+
+  /// A plain slate-gray panel with a faint highlight edge, so the arena
+  /// boundary reads as station hull plating rather than a debug outline.
+  @override
+  void render(Canvas canvas) {
+    final rect = Rect.fromCenter(
+      center: Offset.zero,
+      width: _halfWidth * 2,
+      height: _halfHeight * 2,
+    );
+
+    final fillPaint = Paint()
+      ..shader = Gradient.linear(
+        Offset(0, -_halfHeight),
+        Offset(0, _halfHeight),
+        [const Color(0xFF5B6472), const Color(0xFF333B47)],
+      );
+    canvas.drawRect(rect, fillPaint);
+
+    final borderPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = thickness * 0.06
+      ..color = const Color(0x66000000);
+    canvas.drawRect(rect, borderPaint);
   }
 }

@@ -22,14 +22,13 @@ abstract class SpaceProjectile extends BodyComponent<GalacticDemolitionGame>
     required Vector2 startPosition,
     required Vector2 initialVelocity,
   }) : _startPosition = startPosition,
-       _initialVelocity = initialVelocity {
-    paint.color = color;
-  }
+       _initialVelocity = initialVelocity;
 
   final Vector2 _startPosition;
   final Vector2 _initialVelocity;
 
-  /// Fill color, set once on the inherited [paint] in the constructor.
+  /// Base color; [render] builds a radial highlight/rim around it rather
+  /// than using it as a flat fill.
   Color get color;
 
   /// Collision radius in meters. Also drives mass via [density].
@@ -69,4 +68,25 @@ abstract class SpaceProjectile extends BodyComponent<GalacticDemolitionGame>
 
   @override
   void onTapDown(TapDownEvent event) {}
+
+  /// Replaces the default flat-fill circle with a radial highlight (bright
+  /// off-center hotspot fading to [color]) plus a dark rim — reads as a
+  /// lit, rounded object with volume instead of a solid disc.
+  @override
+  void render(Canvas canvas) {
+    final highlight = Color.lerp(color, const Color(0xFFFFFFFF), 0.55)!;
+    final fillPaint = Paint()
+      ..shader = Gradient.radial(
+        Offset(-radius * 0.3, -radius * 0.3),
+        radius * 1.4,
+        [highlight, color],
+      );
+    canvas.drawCircle(Offset.zero, radius, fillPaint);
+
+    final rimPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = radius * 0.12
+      ..color = const Color(0x99000000);
+    canvas.drawCircle(Offset.zero, radius, rimPaint);
+  }
 }
