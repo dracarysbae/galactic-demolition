@@ -1,10 +1,12 @@
-import 'package:flame/components.dart' as flame;
+import 'package:flame/components.dart' show Anchor;
 import 'package:flame_forge2d/flame_forge2d.dart';
 
 import 'components/boundary_wall.dart';
+import 'components/projectiles/booster_projectile.dart';
 import 'components/wind_affected.dart';
 import 'config/level_config.dart';
 import 'game_state.dart';
+import 'input/slingshot_controller.dart';
 
 /// Root game class. Owns the Forge2D world, camera, and per-level
 /// environment (gravity + wind). Levels are swapped by calling
@@ -22,13 +24,15 @@ class GalacticDemolitionGame extends Forge2DGame {
 
   final List<BoundaryWall> _walls = [];
 
+  SlingshotController? slingshot;
+
   static const double _pixelsPerMeter = 20;
 
   @override
   Future<void> onLoad() async {
     super.onLoad();
     camera.viewfinder.zoom = _pixelsPerMeter;
-    camera.viewfinder.anchor = flame.Anchor.center;
+    camera.viewfinder.anchor = Anchor.center;
   }
 
   /// Tears down the previous level's walls/bodies and configures the world
@@ -39,10 +43,7 @@ class GalacticDemolitionGame extends Forge2DGame {
 
     // Setting `world.gravity` wakes every existing body, which is fine here
     // since we're about to clear them anyway.
-    // Forge2DWorld.gravity is typed with flame's Vector2 (vector_math,
-    // 32-bit), distinct from forge2d's own Vector2 (vector_math_64) used
-    // everywhere else in the physics world — hence the explicit conversion.
-    world.gravity = flame.Vector2(level.gravity.x, level.gravity.y);
+    world.gravity = level.gravity;
 
     for (final wall in _walls) {
       wall.removeFromParent();
@@ -63,7 +64,17 @@ class GalacticDemolitionGame extends Forge2DGame {
       world.add(wall);
     }
 
-    camera.viewfinder.position = flame.Vector2.zero();
+    slingshot?.removeFromParent();
+    slingshot = SlingshotController(
+      origin: Vector2(-halfW * 0.7, halfH * 0.5),
+      projectileFactory: (position, velocity) => BoosterProjectile(
+        startPosition: position,
+        initialVelocity: velocity,
+      ),
+    );
+    world.add(slingshot!);
+
+    camera.viewfinder.position = Vector2.zero();
   }
 
   @override
