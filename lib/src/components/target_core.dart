@@ -52,16 +52,14 @@ class TargetCore extends BuildingBlock {
   @override
   void onDestroyed() {
     game.gameState.completeLevel();
-    game.world.add(
-      ParticleEffects.debris(
+    game.world.addAll(
+      ParticleEffects.explosion(
         origin: body.worldCenter.clone(),
-        color: color,
-        count: 26,
-        speed: 6,
-        lifespan: 0.7,
+        fireColor: color,
+        radius: 3.5,
       ),
     );
-    game.triggerShake(0.5);
+    game.triggerShake(0.6);
   }
 
   /// A breathing white-hot core, like an active reactor — the brighter and

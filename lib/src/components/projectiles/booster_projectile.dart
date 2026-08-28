@@ -6,7 +6,7 @@ import 'space_projectile.dart';
 /// Heavy decommissioned rocket booster. High mass and friction make it
 /// plow through structures rather than bounce off them; low restitution
 /// means very little of its momentum is wasted on rebounding.
-class BoosterProjectile extends SpaceProjectile {
+class BoosterProjectile extends SpaceProjectile with MotionStreak {
   BoosterProjectile({
     required super.startPosition,
     required super.initialVelocity,
@@ -53,6 +53,8 @@ class BoosterProjectile extends SpaceProjectile {
   @override
   void update(double dt) {
     super.update(dt);
+    recordTrailPosition();
+
     _trailTimer += dt;
     if (_trailTimer < _trailInterval) {
       return;
@@ -76,9 +78,11 @@ class BoosterProjectile extends SpaceProjectile {
   }
 
   /// Metallic radial gradient (bright specular hotspot → steel → dark
-  /// gunmetal edge) instead of the base's simple two-tone fill.
+  /// gunmetal edge) instead of the base's simple two-tone fill, preceded by
+  /// a fading motion streak from [MotionStreak].
   @override
   void render(Canvas canvas) {
+    renderTrail(canvas, color);
     canvas.drawCircle(Offset.zero, radius, _metalPaint);
     canvas.drawCircle(Offset.zero, radius, _rimPaint);
   }

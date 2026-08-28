@@ -61,16 +61,14 @@ class PlasmaBatteryProjectile extends SpaceProjectile {
       radius: _blastRadius,
       strength: _blastStrength,
     );
-    game.world.add(
-      ParticleEffects.debris(
+    game.world.addAll(
+      ParticleEffects.explosion(
         origin: origin,
-        color: const Color(0xFF67E8F9),
-        count: 18,
-        speed: 6,
-        lifespan: 0.45,
+        fireColor: const Color(0xFF67E8F9),
+        radius: _blastRadius * 0.6,
       ),
     );
-    game.triggerShake(0.3);
+    game.triggerShake(0.35);
     removeFromParent();
   }
 

@@ -70,7 +70,7 @@ class _MeteorFragment extends SpaceProjectile {
 /// Splits into three smaller fragments when tapped mid-flight, trading one
 /// concentrated hit for a wider spread of smaller impacts — good against
 /// clusters of low-health blocks like Solar Panels.
-class MeteorProjectile extends SpaceProjectile {
+class MeteorProjectile extends SpaceProjectile with MotionStreak {
   MeteorProjectile({
     required super.startPosition,
     required super.initialVelocity,
@@ -111,6 +111,12 @@ class MeteorProjectile extends SpaceProjectile {
 
   @override
   double get restitution => 0.1;
+
+  @override
+  void update(double dt) {
+    super.update(dt);
+    recordTrailPosition();
+  }
 
   @override
   void onTapDown(TapDownEvent event) {
@@ -156,6 +162,7 @@ class MeteorProjectile extends SpaceProjectile {
   /// plain lit-sphere look entirely.
   @override
   void render(Canvas canvas) {
+    renderTrail(canvas, const Color(0xFFF97316));
     canvas.drawCircle(Offset.zero, radius, _bodyPaint);
     for (final crater in _craters) {
       canvas.drawCircle(crater.offset, crater.radius, _craterPaint);

@@ -19,7 +19,8 @@ abstract class BuildingBlock extends BodyComponent<GalacticDemolitionGame>
     required this.halfWidth,
     required this.halfHeight,
   }) : _center = center {
-    final cornerRadius = (halfWidth < halfHeight ? halfWidth : halfHeight) * 0.25;
+    final shortSide = halfWidth < halfHeight ? halfWidth : halfHeight;
+    final cornerRadius = shortSide * 0.25;
     _rrect = RRect.fromRectAndRadius(
       Rect.fromCenter(
         center: Offset.zero,
@@ -33,6 +34,17 @@ abstract class BuildingBlock extends BodyComponent<GalacticDemolitionGame>
       ..style = PaintingStyle.stroke
       ..strokeWidth = cornerRadius * 0.3
       ..color = const Color(0xB3000000);
+    _rimLightPaint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.round
+      ..strokeWidth = shortSide * 0.06
+      ..color = const Color(0x77FFFFFF);
+    _ambientOcclusionPaint = Paint()
+      ..shader = Gradient.linear(
+        Offset(0, halfHeight * 0.4),
+        Offset(0, halfHeight),
+        const [Color(0x00000000), Color(0x70000000)],
+      );
     _refreshFillShader();
   }
 
@@ -70,6 +82,8 @@ abstract class BuildingBlock extends BodyComponent<GalacticDemolitionGame>
   late final RRect _rrect;
   late final RRect _shadowRRect;
   late final Paint _borderPaint;
+  late final Paint _rimLightPaint;
+  late final Paint _ambientOcclusionPaint;
   final Paint _fillPaint = Paint();
   final Paint _shadowPaint = Paint()
     ..color = const Color(0x55000000)
@@ -112,6 +126,11 @@ abstract class BuildingBlock extends BodyComponent<GalacticDemolitionGame>
       return;
     }
     health -= amount;
+    // Every solid hit throws a few sparks, whether or not the block
+    // survives — a hit should always feel tactile, not just a broken one.
+    if (amount > 1) {
+      game.world.add(ParticleEffects.sparks(origin: body.position.clone()));
+    }
     if (isDestroyed) {
       onDestroyed();
       game.gameState.addScore(scoreValue);
@@ -135,6 +154,11 @@ abstract class BuildingBlock extends BodyComponent<GalacticDemolitionGame>
   /// Called only when [health] changes, not every frame — the gradient
   /// [Shader] itself is cheap to rebuild but there's no reason to do it 60
   /// times a second when nothing changed.
+  ///
+  /// Four stops approximate a lit, rounded surface rather than a flat
+  /// tint: a bright specular band near the top (where the implied light
+  /// grazes the surface), a lit mid-tone, the true material color, and a
+  /// darker ambient-occluded band at the bottom.
   void _refreshFillShader() {
     final damageFraction = 1 - (health / maxHealth).clamp(0.0, 1.0);
     final baseColor = Color.lerp(
@@ -142,13 +166,19 @@ abstract class BuildingBlock extends BodyComponent<GalacticDemolitionGame>
       const Color(0xFF1F2937),
       damageFraction * 0.6,
     )!;
-    final topColor = Color.lerp(baseColor, const Color(0xFFFFFFFF), 0.25)!;
-    final bottomColor = Color.lerp(baseColor, const Color(0xFF000000), 0.25)!;
+    final highlightColor = Color.lerp(
+      baseColor,
+      const Color(0xFFFFFFFF),
+      0.5,
+    )!;
+    final litColor = Color.lerp(baseColor, const Color(0xFFFFFFFF), 0.12)!;
+    final shadowColor = Color.lerp(baseColor, const Color(0xFF000000), 0.35)!;
 
     _fillPaint.shader = Gradient.linear(
       Offset(0, -halfHeight),
       Offset(0, halfHeight),
-      [topColor, bottomColor],
+      [highlightColor, litColor, baseColor, shadowColor],
+      const [0, 0.22, 0.65, 1],
     );
   }
 
@@ -162,13 +192,20 @@ abstract class BuildingBlock extends BodyComponent<GalacticDemolitionGame>
   void onDestroyed() {}
 
   /// Replaces [BodyComponent]'s default flat-fill fixture rendering with a
-  /// rounded, top-lit block: a drop shadow for separation from the space
-  /// background, a vertical gradient for volume, subclass-specific accents
+  /// lit, rounded block: a drop shadow for separation from the space
+  /// background, a 4-stop gradient for volume, a bottom ambient-occlusion
+  /// pass, a bright top-edge rim light, subclass-specific accents
   /// (bevel/glass/glow — see [renderAccents]), and a dark border.
   @override
   void render(Canvas canvas) {
     canvas.drawRRect(_shadowRRect, _shadowPaint);
     canvas.drawRRect(_rrect, _fillPaint);
+    canvas.drawRRect(_rrect, _ambientOcclusionPaint);
+    canvas.drawLine(
+      Offset(_rrect.left + _rrect.tlRadius.x, _rrect.top),
+      Offset(_rrect.right - _rrect.trRadius.x, _rrect.top),
+      _rimLightPaint,
+    );
     renderAccents(canvas, _rrect);
     canvas.drawRRect(_rrect, _borderPaint);
   }

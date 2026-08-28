@@ -56,16 +56,14 @@ class CoolantTankBlock extends BuildingBlock {
       radius: _blastRadius,
       strength: _blastStrength,
     );
-    // A second, fierier burst on top of the base destruction debris, plus
-    // a stronger shake — this is meant to feel like the biggest bang on
-    // the board.
-    game.world.add(
-      ParticleEffects.debris(
+    // The full layered explosion (flash/shockwave/smoke/embers/chunks) on
+    // top of the base destruction debris, plus a strong shake — this is
+    // meant to feel like the biggest bang on the board.
+    game.world.addAll(
+      ParticleEffects.explosion(
         origin: origin.clone(),
-        color: _explosionColor,
-        count: 22,
-        speed: 7,
-        lifespan: 0.5,
+        fireColor: _explosionColor,
+        radius: _blastRadius * 0.7,
       ),
     );
     game.triggerShake(0.45);

@@ -1,3 +1,4 @@
+import 'dart:math';
 import 'dart:ui';
 
 import 'package:flame/events.dart';
@@ -94,5 +95,53 @@ abstract class SpaceProjectile extends BodyComponent<GalacticDemolitionGame>
   void render(Canvas canvas) {
     canvas.drawCircle(Offset.zero, radius, _fillPaint);
     canvas.drawCircle(Offset.zero, radius, _rimPaint);
+  }
+}
+
+/// Shared motion-streak trail for projectiles fast/heavy enough that they
+/// should visibly show their recent path instead of just teleporting from
+/// frame to frame (Booster, Meteor). Mix in, call [recordTrailPosition]
+/// once per [update], and call [renderTrail] at the start of [render].
+mixin MotionStreak on SpaceProjectile {
+  final List<Vector2> _trailHistory = [];
+  static const int _trailLength = 6;
+  final Paint _trailPaint = Paint();
+
+  void recordTrailPosition() {
+    _trailHistory.insert(0, body.position.clone());
+    if (_trailHistory.length > _trailLength) {
+      _trailHistory.removeLast();
+    }
+  }
+
+  /// Draws a fading streak through recent world positions.
+  ///
+  /// [render] runs inside a canvas already translated *and rotated* to the
+  /// body's current transform (see `BodyComponent.renderTree`), so each
+  /// history point — recorded in world space — is rotated by `-body.angle`
+  /// before drawing to cancel that out; otherwise the trail would swing
+  /// around with the body's own spin instead of staying laid out along its
+  /// actual path.
+  void renderTrail(Canvas canvas, Color streakColor) {
+    if (_trailHistory.length < 2) {
+      return;
+    }
+    final cosA = cos(-body.angle);
+    final sinA = sin(-body.angle);
+    final current = body.position;
+
+    for (var i = 1; i < _trailHistory.length; i++) {
+      final worldOffset = _trailHistory[i] - current;
+      final localX = worldOffset.x * cosA - worldOffset.y * sinA;
+      final localY = worldOffset.x * sinA + worldOffset.y * cosA;
+
+      final fade = 1 - i / _trailHistory.length;
+      _trailPaint.color = streakColor.withValues(alpha: fade * 0.3);
+      canvas.drawCircle(
+        Offset(localX, localY),
+        radius * (1 - i / _trailHistory.length * 0.6),
+        _trailPaint,
+      );
+    }
   }
 }
