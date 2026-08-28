@@ -20,6 +20,18 @@ class GameState extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Spends one unit of ammo. Returns false without changing state if none
+  /// is left, so callers (e.g. the slingshot) can refuse to launch instead
+  /// of driving ammo negative.
+  bool consumeAmmo() {
+    if (ammoRemaining <= 0) {
+      return false;
+    }
+    ammoRemaining -= 1;
+    notifyListeners();
+    return true;
+  }
+
   void completeLevel() {
     isLevelComplete = true;
     notifyListeners();

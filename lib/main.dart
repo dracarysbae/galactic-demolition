@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import 'src/galactic_demolition_game.dart';
 import 'src/game_state.dart';
 import 'src/levels/levels_data.dart';
+import 'src/ui/overlays/hud_overlay.dart';
 
 void main() {
   runApp(const GalacticDemolitionApp());
@@ -50,7 +51,9 @@ class _GameScreenState extends State<GameScreen> {
         body: Stack(
           children: [
             GameWidget(game: _game),
-            // HUD overlay goes here (STEP 4).
+            HudOverlay(
+              onRestart: () => _game.loadLevel(_game.currentLevel),
+            ),
           ],
         ),
       ),

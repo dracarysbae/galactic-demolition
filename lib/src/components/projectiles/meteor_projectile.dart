@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui';
 
 import 'package:flame/events.dart';
 import 'package:flame_forge2d/flame_forge2d.dart';
@@ -13,6 +14,9 @@ class _MeteorFragment extends SpaceProjectile {
     required super.startPosition,
     required super.initialVelocity,
   });
+
+  @override
+  Color get color => const Color(0xFFA8A29E);
 
   @override
   double get radius => 0.2;
@@ -43,6 +47,9 @@ class MeteorProjectile extends SpaceProjectile {
   /// Fragments keep most, but not all, of the parent's speed — the split
   /// itself absorbs some kinetic energy, same as a real fragmentation.
   static const double _fragmentSpeedFactor = 0.75;
+
+  @override
+  Color get color => const Color(0xFF78716C);
 
   @override
   double get radius => 0.45;

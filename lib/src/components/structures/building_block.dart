@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flame_forge2d/flame_forge2d.dart';
 
 import '../../galactic_demolition_game.dart';
@@ -15,11 +17,17 @@ abstract class BuildingBlock extends BodyComponent<GalacticDemolitionGame>
     required Vector2 center,
     required this.halfWidth,
     required this.halfHeight,
-  }) : _center = center;
+  }) : _center = center {
+    paint.color = color;
+  }
 
   final Vector2 _center;
   final double halfWidth;
   final double halfHeight;
+
+  /// Fill color, set once on the inherited [paint] in the constructor —
+  /// the only visual difference between block types other than shape/size.
+  Color get color;
 
   double get density;
   double get friction;
@@ -35,6 +43,11 @@ abstract class BuildingBlock extends BodyComponent<GalacticDemolitionGame>
 
   late double health = maxHealth;
   bool get isDestroyed => health <= 0;
+
+  /// Score awarded when this block is destroyed. Defaults to [maxHealth]
+  /// rounded — tougher blocks are worth proportionally more to destroy —
+  /// but subclasses can override for a flat/curated value instead.
+  int get scoreValue => maxHealth.round();
 
   @override
   Body createBody() {
@@ -72,6 +85,7 @@ abstract class BuildingBlock extends BodyComponent<GalacticDemolitionGame>
     health -= amount;
     if (isDestroyed) {
       onDestroyed();
+      game.gameState.addScore(scoreValue);
       removeFromParent();
     } else {
       onDamaged(amount);

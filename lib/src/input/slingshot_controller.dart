@@ -101,6 +101,9 @@ class SlingshotController extends PositionComponent
     if (pull == null || pull.length < 0.1) {
       return;
     }
+    if (!game.gameState.consumeAmmo()) {
+      return;
+    }
     game.world.add(
       projectileFactory(origin.clone(), _launchVelocity(pull)),
     );

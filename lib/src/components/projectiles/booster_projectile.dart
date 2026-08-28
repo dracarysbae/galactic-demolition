@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'space_projectile.dart';
 
 /// Heavy decommissioned rocket booster. High mass and friction make it
@@ -8,6 +10,9 @@ class BoosterProjectile extends SpaceProjectile {
     required super.startPosition,
     required super.initialVelocity,
   });
+
+  @override
+  Color get color => const Color(0xFFFB923C);
 
   @override
   double get radius => 0.5;

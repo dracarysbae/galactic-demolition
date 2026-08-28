@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flame/events.dart';
 import 'package:flame_forge2d/flame_forge2d.dart';
 
@@ -20,10 +22,15 @@ abstract class SpaceProjectile extends BodyComponent<GalacticDemolitionGame>
     required Vector2 startPosition,
     required Vector2 initialVelocity,
   }) : _startPosition = startPosition,
-       _initialVelocity = initialVelocity;
+       _initialVelocity = initialVelocity {
+    paint.color = color;
+  }
 
   final Vector2 _startPosition;
   final Vector2 _initialVelocity;
+
+  /// Fill color, set once on the inherited [paint] in the constructor.
+  Color get color;
 
   /// Collision radius in meters. Also drives mass via [density].
   double get radius;

@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flame/events.dart';
 
 import '../../systems/explosion_system.dart';
@@ -17,6 +19,9 @@ class PlasmaBatteryProjectile extends SpaceProjectile {
 
   /// Peak impulse magnitude applied to bodies at the blast center.
   static const double _blastStrength = 12;
+
+  @override
+  Color get color => const Color(0xFFA855F7);
 
   @override
   double get radius => 0.4;

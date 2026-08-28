@@ -3,10 +3,13 @@ import 'package:flame_forge2d/flame_forge2d.dart';
 
 import 'components/boundary_wall.dart';
 import 'components/projectiles/booster_projectile.dart';
+import 'components/projectiles/space_projectile.dart';
+import 'components/structures/building_block.dart';
 import 'components/wind_affected.dart';
 import 'config/level_config.dart';
 import 'game_state.dart';
 import 'input/slingshot_controller.dart';
+import 'levels/level_loader.dart';
 
 /// Root game class. Owns the Forge2D world, camera, and per-level
 /// environment (gravity + wind). Levels are swapped by calling
@@ -23,10 +26,12 @@ class GalacticDemolitionGame extends Forge2DGame {
       _currentLevel ?? (throw StateError('No level loaded yet'));
 
   final List<BoundaryWall> _walls = [];
+  final List<BuildingBlock> _structures = [];
 
   SlingshotController? slingshot;
 
   static const double _pixelsPerMeter = 20;
+  static const int _startingAmmo = 8;
 
   @override
   Future<void> onLoad() async {
@@ -74,6 +79,17 @@ class GalacticDemolitionGame extends Forge2DGame {
     );
     world.add(slingshot!);
 
+    for (final structure in _structures) {
+      structure.removeFromParent();
+    }
+    _structures
+      ..clear()
+      ..addAll(LevelLoader.spawnDemoStructure(world, level));
+
+    gameState
+      ..reset()
+      ..setAmmoRemaining(_startingAmmo);
+
     camera.viewfinder.position = Vector2.zero();
   }
 
@@ -81,6 +97,26 @@ class GalacticDemolitionGame extends Forge2DGame {
   void update(double dt) {
     super.update(dt);
     _applyWind(dt);
+    _checkOutOfAmmo();
+  }
+
+  /// The player has lost once every shot has been fired, none are still in
+  /// flight, and the target still stands. Waiting for in-flight projectiles
+  /// to clear avoids calling it too early on the very shot that would have
+  /// won — e.g. a Meteor's fragments are still airborne after the parent is
+  /// removed.
+  void _checkOutOfAmmo() {
+    if (gameState.ammoRemaining > 0 ||
+        gameState.isLevelComplete ||
+        gameState.isGameOver) {
+      return;
+    }
+    final hasActiveProjectile = world.children
+        .query<BodyComponent>()
+        .any((component) => component is SpaceProjectile);
+    if (!hasActiveProjectile) {
+      gameState.gameOver();
+    }
   }
 
   /// Wind is not a native Forge2D concept, so it's applied here as a

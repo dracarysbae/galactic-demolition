@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'structures/building_block.dart';
 
 /// The AI core each level's demolition is aimed at.
@@ -18,6 +20,9 @@ class TargetCore extends BuildingBlock {
   final double maxHealth;
 
   @override
+  Color get color => const Color(0xFFEF4444);
+
+  @override
   double get density => 2.0;
 
   @override
@@ -25,6 +30,9 @@ class TargetCore extends BuildingBlock {
 
   @override
   double get restitution => 0.05;
+
+  @override
+  int get scoreValue => 500;
 
   @override
   void onDestroyed() {

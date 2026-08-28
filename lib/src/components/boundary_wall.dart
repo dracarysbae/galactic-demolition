@@ -1,3 +1,5 @@
+import 'dart:ui';
+
 import 'package:flame_forge2d/flame_forge2d.dart';
 
 /// A single static edge of the play area (ground, ceiling, left/right walls).
@@ -10,7 +12,9 @@ class BoundaryWall extends BodyComponent {
     required this.start,
     required this.end,
     this.thickness = 0.5,
-  });
+  }) {
+    paint.color = const Color(0xFF4B5563);
+  }
 
   final Vector2 start;
   final Vector2 end;
